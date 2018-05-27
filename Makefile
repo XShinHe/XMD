@@ -1,3 +1,5 @@
+# if you see this line, it say that this makefile can not work!
+
 include make.inc
 FC = gfortran
 EXE = pimd3
