@@ -23,6 +23,15 @@ Molecular Dynamics Package of staging/NM PIMD, PILD, (CMD, RPMD, ELD, ECD, EHD e
 * the trajectory of PILD is not correct.
 * the elimination of transiton and rotation of water is not total correct.
 
+# others
+here we provide a series of python srcipts to anaylize the result, containing
+* stat.py, statistic the distribution of data in nth-column of a file
+* Cata.py
+* cct.py
+* fft.py
+* IR.py
+* rvs.py
+
 # futures
 * optimize the IO files
 * fix the bugs
