@@ -1,11 +1,12 @@
-# if you see this line, it say that this makefile can not work!
-
 include make.inc
 FC = gfortran
-EXE = pimd3
-srccodes = MyDef.f90 AM_script.f90 md_info.f90 myFF.f90 methd_plus.f90 thermo_plus.f90 elim_plus.f90 h2opes.f90 md_rout.f90 main.f90
+EXE = $(xtag)
+
+xlib_file = $(xlib)/MyDef.f90 $(xlib)/AM_script.f90 $(xlib)/md_info.f90 $(xlib)/methd_plus.f90 $(xlib)/thermo_plus.f90 $(xlib)/elim_plus.f90
+xff_file = $(xff)/h2opes.f90 $(xff)/myFF.f90
+xtag_file = ./src/$(xtag)/md_rout.f90 ./src/$(xtag)/main.f90
 
 default:
-	$(FC) -fcheck=all -Wall  $(srccodes) -L./Lapack -llapack -lrefblas -o $(EXE)
+	$(FC) -fcheck=all -Wall  $(xlib_file) $(xff_file) $(xtag_file) -L./$(xlapcak) -llapack -o $(EXE)
 clean:
 	rm -rf *.o *.mod $(EXE)

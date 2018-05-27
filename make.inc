@@ -1,8 +1,7 @@
-mod=pimd
-#mod=pild
-#mod=pimd3
+# an example setting for MD3H2O
 
+xtag=MD3H2O
 xlapack=./src/liblapak
 xpython=./src/pyscript
-xff=./src/ff
-xlib=./src/plus
+xff=./src/mdff
+xlib=./src/mdlib/
