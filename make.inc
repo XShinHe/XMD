@@ -1,7 +1,7 @@
 # an example setting for MD3H2O
 
-xtag=MD3H2O
-xlapack=./src/liblapak
+xflag=MD3H2O
+xliblapack=./lib
 xpython=./src/pyscript
 xff=./src/mdff
-xlib=./src/mdlib/
+xbs=./src/mdbasis/
