@@ -1,0 +1,15 @@
+#makesure 2-in-a-line
+temp	0.125
+sfreq	1
+mass	1
+coeff	1
+nstep	40000000
+nsmp	1000
+gammaAD	1e-06
+methd	2
+scheme	0
+thermo	0
+mirror	0
+opt	0
+bead	200
+dtime	5e-05
