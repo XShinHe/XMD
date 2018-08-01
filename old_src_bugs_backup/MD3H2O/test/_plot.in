@@ -1,6 +1,0 @@
-xlabel  Energy
-ylabel  Density,distribution
-title   the,distributon,of,Quadric,potenial
-x1  0
-x2  1
-text    bead=200\n$beta$=8\\ndt=0.01

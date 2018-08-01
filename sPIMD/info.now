@@ -1,8 +1,11 @@
-job				quartic,potential,system
+job				quadratic,potential,system,without,T
 stat-xlabel		Position
 stat-ylabel		Density,distribution
 stat-title		the,distributon,of,quadratic,potenial
-cct-y			correlation,function,of,position
-cct-t			PIMD,correlation,result
 stat-x1 		-1.5
 stat-x2 		1.5
+cct-y			correlation,function,of,position
+cct-t			PIMD,correlation,result
+cct-title		
+cct-x1
+cct-x2

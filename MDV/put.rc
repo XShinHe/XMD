@@ -1,0 +1,13 @@
+temp	0.125
+sfreq	1
+coeff	1
+gammaAD	1
+nstep	1000000
+nsmp	1
+methd	1
+scheme	0
+thermo	0
+mirror	0
+opt	0
+bead	1
+dtime	0.1

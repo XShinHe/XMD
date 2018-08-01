@@ -64,13 +64,13 @@ implicit none
     real(kind=8), dimension(:), allocatable :: bd_m
 !!
 contains
-!
+! 
 ! %fun% pential energy surface
-!
+! 
 real(kind=8) function fun_pes(x)
 implicit none
     real(kind=8), intent(in) :: x
-    fun_pes = 0.2500000 * ( x **4 )
+    fun_pes = 0.5_8 * ( x * x )
 end function fun_pes
 !!
 subroutine calc_pe()
@@ -116,7 +116,7 @@ subroutine calc_fx()
 implicit none
     integer :: i
     do i=1,md_bead
-        bd_fx(i) = bd_x(i)**3
+        bd_fx(i) = bd_x(i)
     end do
 end subroutine calc_fx
 !!
@@ -477,7 +477,7 @@ implicit none
                 !!
                 call md_run_p(2)
                 call md_run_x(2)
-                call md_run_t(1)
+                !call md_run_t(1)
                 call md_run_x(2)
                 call md_run_p(2)
                 !!
@@ -578,7 +578,7 @@ end subroutine md_run_t
 
 
 ! an update of position
-!
+! 
 subroutine md_run_x(n_dvd)
 use md_spimd
 implicit none

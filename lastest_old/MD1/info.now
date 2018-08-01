@@ -1,0 +1,7 @@
+job		general,MD,program,of,1-Dimension
+anaterm nstep,atomidx,bar{x},pe,ke,kev,tote,is_eqb
+xlabel  Energy
+ylabel  Density,distribution
+title   the,distributon,of,Quadratic,potenial
+x1  -1
+x2  1
