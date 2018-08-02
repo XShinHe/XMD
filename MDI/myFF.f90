@@ -1,4 +1,10 @@
-! the my defined force field file
+!*
+!--- Copyright by --- XShinHe <1500011805@pku.edu.cn>
+!------- Date 2018. 08
+!--- Acknowledgement to Liu group, of PKU
+!*
+!-- This is a simple version of force field
+
 module myFF
 use MyDef
 implicit none

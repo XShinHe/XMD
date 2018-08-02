@@ -1,9 +1,14 @@
-! --- Copyright by Shin He <hx0824916@pku.edu.cn> ---
+!*
+!--- Copyright by --- XShinHe <1500011805@pku.edu.cn>
+!------- Date 2018. 08
+!--- Acknowledgement to Liu group, of PKU
+!*
+
 
 module thermo_plus
 use MyDef
 use AM_script
-use methd_plus
+use pimd_plus
 use md_info
 implicit none
     integer, private :: N_nhc=2 ! for default
@@ -41,7 +46,7 @@ contains
         type(mole), intent(inout) :: mobj
         integer, intent(in) :: n_dvd
         integer :: h, i, j, k, alpha
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead
                 do k=1,N_respa
                     do alpha=1,N_sy
@@ -53,18 +58,18 @@ contains
                             np(h,i,j) = np(h,i,j) - np(h+1,i,j)/nQ(h+1) * delta(alpha) / real(4*n_dvd)
                         end do
                         np(1,i,j) = np(1,i,j) - np(2,i,j)/nQ(2) * delta(alpha) / real(4*n_dvd) 
-                        np(1,i,j) = np(1,i,j) + ( mobj%a(i)%p(j)**2/(mobj%a(i)%m * masscoeff(j)) - md_temp ) &
+                        np(1,i,j) = np(1,i,j) + ( mobj%v(i,3,j)**2/(mobj%a(i)%m * masscoeff(j)) - md_temp ) &
                                      * (delta(alpha) / real(2*n_dvd))
                         np(1,i,j) = np(1,i,j) - np(2,i,j)/nQ(2) * delta(alpha) / real(4*n_dvd) 
                         !!
                         do h=1,N_nhc
                             nx(h,i,j) = nx(h,i,j) + np(h,i,j) / nQ(h)* delta(alpha)/real(n_dvd)
                         end do
-                        mobj%a(i)%p(j) = mobj%a(i)%p(j) - np(1,i,j)/nQ(1)*(delta(alpha)/real(n_dvd))
-                        print *,'i j k a p p1', i, j, k, alpha, mobj%a(i)%p(j), np(1,i,j)
+                        mobj%v(i,3,j) = mobj%v(i,3,j) - np(1,i,j)/nQ(1)*(delta(alpha)/real(n_dvd))
+                        print *,'i j k a p p1', i, j, k, alpha, mobj%v(i,3,j), np(1,i,j)
                         !!
                         np(1,i,j) = np(1,i,j) - np(2,i,j)/nQ(2) * delta(alpha) / real(4*n_dvd)
-                        np(1,i,j) = np(1,i,j) + ( mobj%a(i)%p(j)**2/(mobj%a(i)%m* masscoeff(j)) - md_temp ) &
+                        np(1,i,j) = np(1,i,j) + ( mobj%v(i,3,j)**2/(mobj%a(i)%m* masscoeff(j)) - md_temp ) &
                                     * (delta(alpha) / real(2*n_dvd))
                         np(1,i,j) = np(1,i,j) - np(2,i,j)/nQ(2) * delta(alpha) / real(4*n_dvd)
                         do h=2,N_nhc-1,1
@@ -84,7 +89,7 @@ contains
         type(mole), intent(inout) :: mobj
         integer, intent(in) :: n_dvd
         integer :: h, i, j, k, alpha
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead
                 do k=1,N_respa
                     do alpha=1,N_sy
@@ -96,17 +101,17 @@ contains
                             np(h,i,j) = np(h,i,j) * EXP( -np(h+1,i,j)/nQ(h+1) * delta(alpha) / real(4*n_dvd) )
                         end do
                         np(1,i,j) = np(1,i,j) * EXP( -np(2,i,j)/nQ(2) * delta(alpha) / real(4*n_dvd) )
-                        np(1,i,j) = np(1,i,j) + ( mobj%a(i)%p(j)**2/(mobj%a(i)%m* masscoeff(j)) - md_temp ) &
+                        np(1,i,j) = np(1,i,j) + ( mobj%v(i,3,j)**2/(mobj%a(i)%m* masscoeff(j)) - md_temp ) &
                                     * (delta(alpha) / real(2*n_dvd))
                         np(1,i,j) = np(1,i,j) * EXP( -np(2,i,j)/nQ(2) * delta(alpha) / real(4*n_dvd) )
                         !!
                         do h=1,N_nhc
                             nx(h,i,j) = nx(h,i,j) + np(h,i,j) / nQ(h)* delta(alpha)/real(n_dvd)
                         end do
-                        mobj%a(i)%p(j) = mobj%a(i)%p(j) * EXP( -np(1,i,j)/nQ(1)*delta(alpha)/real(n_dvd) )
+                        mobj%v(i,3,j) = mobj%v(i,3,j) * EXP( -np(1,i,j)/nQ(1)*delta(alpha)/real(n_dvd) )
                         !!
                         np(1,i,j) = np(1,i,j) * EXP( -np(2,i,j)/nQ(2) * delta(alpha) / real(4*n_dvd) )
-                        np(1,i,j) = np(1,i,j) + ( mobj%a(i)%p(j)**2/(mobj%a(i)%m* masscoeff(j)) - md_temp ) & 
+                        np(1,i,j) = np(1,i,j) + ( mobj%v(i,3,j)**2/(mobj%a(i)%m* masscoeff(j)) - md_temp ) & 
                                     * (delta(alpha) / real(2*n_dvd))
                         np(1,i,j) = np(1,i,j) * EXP( -np(2,i,j)/nQ(2) * delta(alpha) / real(4*n_dvd) )
                         do h=2,N_nhc-1,1
@@ -126,11 +131,11 @@ contains
         type(mole), intent(inout) :: mobj
         integer, intent(in) :: n_dvd
         integer :: h, i, j, k, alpha
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead
                 do k=1,N_respa
                     do alpha=1,N_sy
-                        nG(1,i,j) = mobj%a(i)%p(j)**2/(mobj%a(i)%m* masscoeff(j)) - md_temp
+                        nG(1,i,j) = mobj%v(i,3,j)**2/(mobj%a(i)%m* masscoeff(j)) - md_temp
                         do h=2,N_nhc-1,1
                             nG(h,i,j) = np(h-1,i,j)*np(h-1,i,j)/nQ(h-1) - md_temp
                         end do
@@ -145,8 +150,8 @@ contains
                         do h=1,N_nhc
                             nx(h,i,j) = nx(h,i,j) + np(h,i,j) / nQ(h)* delta(alpha)/real(n_dvd)
                         end do
-                        mobj%a(i)%p(j) = mobj%a(i)%p(j) * EXP( -np(1,i,j)/nQ(1)*delta(alpha)/real(n_dvd) )
-                        print *,'i j k a p p1', i, j, k, alpha, mobj%a(i)%p(j), np(1,i,j)
+                        mobj%v(i,3,j) = mobj%v(i,3,j) * EXP( -np(1,i,j)/nQ(1)*delta(alpha)/real(n_dvd) )
+                        print *,'i j k a p p1', i, j, k, alpha, mobj%v(i,3,j), np(1,i,j)
                         !!
                         do h=1,N_nhc-1,1
                             np(h,i,j) = np(h,i,j) * EXP( -np(h+1,i,j)/nQ(h+1) * delta(alpha) / real(4*n_dvd) )

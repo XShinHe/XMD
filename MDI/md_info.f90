@@ -1,6 +1,6 @@
 !*
 !--- Copyright by --- XShinHe <1500011805@pku.edu.cn>
-!------- Date 2018. 07
+!------- Date 2018. 08
 !--- Acknowledgement to Liu group, of PKU
 !*
 
@@ -8,55 +8,68 @@ module md_info
 use MyDef
 use AM_script
 implicit none
-    !-- esemble settings
-    real(dp) :: md_nsum    ! N
+    !-- Recording number(real/integer) information, using preffix 'md'
+    !-- 1) Esemble parameters
+    integer  :: md_nsum    ! N
     real(dp) :: md_esum    ! E
     real(dp) :: md_temp    ! T
     real(dp) :: md_beta    ! 1/T
     real(dp) :: md_pres    ! P
     real(dp) :: md_volm    ! V
     
-    !-- thermostat parameters (friction/collide argumnet)
-    integer  :: md_thermo
-    integer  :: md_scheme
-    real(dp) :: md_coeff
-
-	!-- dynamic parameters
-    integer  :: md_methd ! primitive, staging, normal-mode
-    integer  :: md_virtual
-    integer  :: md_bead = 1              ! default vaule
-    real(dp) :: md_bfreq                 ! default
-    real(dp) :: md_bfreq2
-    real(dp) :: md_gamma                 ! for PILD
-
-    !-- for numerical simulation parameters
+    !-- 2) Simulation and sampling parameters
+    real(dp) :: md_dtime
     integer  :: md_nstep
     integer  :: md_npass
-    real(dp) :: md_dtime
-    integer  :: md_nsmp = 1000  
+    integer  :: md_nsamp
+    
+    !-- 3) Path integral technique parameters
+    integer  :: md_ipimd                 ! path integral mode [ 0: primitive / 1: staging / 2: normal-mode ]
+    integer  :: md_bead                  ! default vaule
+    real(dp) :: md_bfreq                 ! default
+    real(dp) :: md_bfreq2
+    real(dp) :: md_gamma                 ! for PILD, adiabatic parameter
+    
+    !-- 4) Thermostat and spliting parameters
+    integer  :: md_ithermo               ! thermostat parameter [ Langevin, Anderson, Nose-Hoover Chain]
+    integer  :: md_ischeme               ! spilting parameter [ VV,LF,PC,RK / middle, end, side]
+    real(dp) :: md_coeff                 ! (parameter describing the friction/collision process)
+	real(dp), dimension(4,2) :: langc    ! parameters of Langevin/Anderson
 
-    !-- execute mode parameters
-    integer  :: md_x_mode = -1 ! 0, general; 1, eqb; 2, restart; 3, from sampling; 4, from list
-    integer  :: md_y_mode = -1 ! 0, only output ana_file; 1, output ana and out file
-    integer  :: md_m_mode = 0  ! clear to a new start step
-    integer  :: md_e_mode = 0  ! 0 needn't strike equilibrium; 1, needs.
-    integer  :: md_sn_mode = 0 ! n-th example of sampling file
-    integer  :: md_b_mode = 0  ! build from the cnfg.rc
+	!-- 5) Other parameters
+	!----- for example, the vir/real process (NOT the IMAGINARY/REAL-TIME process)
+    integer  :: md_ivir
+	!----- and for example, the optimization to initialization
+    integer  :: md_iopt
+    real(dp) :: md_cfreq                 ! giving an approximation of system's character frequency for optimizattion
+    
 
-    !-- optimization controlling parameter
-    integer  :: md_opt = 0
-    real(dp) :: md_sysfreq                    ! mass and atomfreq are should be arranged to cnfg.in file, not here
-
-    !-- for temporary values
-    real(dp), dimension(4,2) :: langc
+    !-- 6) execute mode parameters
+    integer  :: md_x_mode                ! 0, general; 1, equilibrium; 2, restart; 3, fr. sampling; 4, fr. list
+    integer  :: md_y_mode                ! 0, output ana_file; 1, output ana and out file
+    integer  :: md_m_mode                ! 0, set new npass to restart; 1, from last npass to restart
+    integer  :: md_e_mode                ! 0 needn't strike equilibrium; 1, need that.
+    integer  :: md_sn_mode               ! n-th example of sampling file
+    integer  :: md_b_mode                ! build mode from the cnfg.rc
    
 contains
-
+	
+	!-- initialize parameters from putrc_file
 	subroutine init_md()
 	implicit none
 		integer :: n_init
 		character(len=len1), dimension(2) :: pairs
 
+		!-- set default parameters
+		md_ipimd   = 1    ! staging path integral mode
+		md_ischeme = 0    ! VV-middle
+		md_ithermo = 0    ! Langevin thermostat
+		md_ivir    = 0    ! don't use vir-dynamics
+		md_iopt    = 0    ! don't optimize parameters
+		md_bead    = 1    ! classical molecular dynamics
+		md_nsamp   = 100  ! default sampling step
+		
+		!-- read and count the parameters
 		n_init = 0
 		inquire( file=trim(putrc_file), exist=my_exist )
 		if (my_exist .eqv. .true.) then
@@ -68,30 +81,33 @@ contains
 		            case ('temp')
 		                read(pairs(2),*) md_temp
 		                md_beta = 1_dp / md_temp
-		            case ('sfreq')
-		                read(pairs(2),*) md_sysfreq
 		            case ('dtime')
 		                read(pairs(2),*) md_dtime
-		            case ('coeff')
-		                read(pairs(2),*) md_coeff
 		            case ('nstep')
 		                read(pairs(2),*) md_nstep
-		            case ('methd')
-		                read(pairs(2),*) md_methd
-		            case ('scheme')
-		                read(pairs(2),*) md_scheme
+		            case ('nsamp')
+		                read(pairs(2),*) md_nsamp
 		            case ('thermo')
-		                read(pairs(2),*) md_thermo
-		            case ('mirror')
-		                read(pairs(2),*) md_virtual
+		                read(pairs(2),*) md_ithermo
+		            case ('scheme')
+		                read(pairs(2),*) md_ischeme  
+		            case ('coeff')
+		                read(pairs(2),*) md_coeff
+		            case ('pimode')
+		                read(pairs(2),*) md_ipimd
 		            case ('bead')
 		                read(pairs(2),*) md_bead
 		                n_init = n_init - 1
-		            case ('nsmp')
-		                read(pairs(2),*) md_nsmp
+		            case ('gamma')
+		                read(pairs(2),*) md_gamma
 		                n_init = n_init - 1
+		            case ('vir')
+		                read(pairs(2),*) md_ivir
 		            case ('opt')
-		                read(pairs(2),*) md_opt
+		                read(pairs(2),*) md_iopt
+		                n_init = n_init - 1
+		            case ('cfreq')
+		                read(pairs(2),*) md_cfreq
 		                n_init = n_init - 1
 		            case default
 		                n_init = n_init - 1
@@ -104,14 +120,14 @@ contains
 		end if
 		
 		!-- if allow to optimize
-		if (md_opt .eq. 1) then
-		    md_dtime = 0.2 / md_sysfreq
-		    md_nstep = 10000 / md_sysfreq
-		    select case (md_thermo)
+		if (md_iopt .eq. 1) then
+		    md_dtime = 0.2 / md_cfreq
+		    md_nstep = 10000 / md_cfreq
+		    select case (md_ithermo)
 		        case (0)
-		            md_coeff = md_sysfreq
+		            md_coeff = md_cfreq
 		        case (1)
-		            md_coeff = sqrt(2.) * md_sysfreq
+		            md_coeff = sqrt(2.) * md_cfreq
 		        case (2)
 		            md_coeff = 20 * md_dtime
 		    end select
@@ -146,8 +162,7 @@ contains
         type(mole), intent(inout) :: mobj
         character(len=len3) :: ins_s
         character(len=len0) :: ins_c
-        real(dp) :: ins_r
-        real(dp), dimension(:), allocatable :: ins_rs
+        real(dp) :: ins_r, ins_rs
         integer :: ins_i, ins_j
         integer :: i,j
         
@@ -160,40 +175,31 @@ contains
         if (ins_s(1:1) .ne.'!') then
             call send_err('error: format error of cnfg.rc')
         end if
-        mobj%nm=ins_s(2:len(ins_s))
-        mobj%nb=ins_i
+        mobj%iname=ins_s(2:len(ins_s))
+        md_nsum=ins_i
         
-        if(ins_j > 0) then 
-        	allocate(ins_rs(ins_j))
+        if(ins_j > 0) then
         	md_b_mode = 1
         else
         	md_b_mode = 0
         end if
         
         !-- allocations
-        allocate(mobj%a( mobj%nb ))
-        do i=1,mobj%nb
-            allocate( mobj%a(i)%x( md_bead ) )
-            allocate( mobj%a(i)%ks( md_bead) )
-            allocate( mobj%a(i)%p( md_bead ) )
-            allocate( mobj%a(i)%fx( md_bead) )
-            allocate( mobj%a(i)%fks( md_bead) )
-        end do
+        allocate(mobj%a( md_nsum ))
+        allocate(mobj%v(md_nsum,5,md_bead))
         
-        !-- pre-initialization of position
-        do i=1,mobj%nb
+        !-- first initialization of position
+        do i=1,md_nsum
         	if(ins_j .eq. 0) then
 	            read(10,*,iostat=my_iostat) ins_c, ins_r
 	        else if(ins_j > 0) then
 	        	read(10,*,iostat=my_iostat) ins_c, ins_r, ins_rs
 	        end if
             if(my_iostat<0) exit
-            mobj%a(i)%elem = ins_c
+            mobj%a(i)%iname = ins_c
     	    mobj%a(i)%m = ins_r
     	    if(ins_j>0) then
-	            do j=1,md_bead
-    	        	mobj%a(i)%x(j) = ins_rs(1)  !-------------------------- for high dimensional, should fix bug
-    	        end do
+    	    	mobj%v(i,2,:) = ins_rs
     		end if
         end do
         close(unit=10)    
@@ -203,7 +209,7 @@ contains
 	subroutine init_traj(mobj)
 	implicit none
 		type(mole), intent(inout) :: mobj 
-		real(dp), dimension(8) :: ins_r !----------------------------------, move 8?
+		real(dp), dimension(8) :: ins_r
 		character(len=10) :: ins_c
 		integer :: i, j, k
 		
@@ -213,12 +219,12 @@ contains
 		select case (md_x_mode)
 			!-- restart from nothing/cnfg.rc
 			case(1)
-		        do i=1,mobj%nb
+		        do i=1,md_nsum
 		            do j=1,md_bead
 		                if(md_b_mode .eq. 0) then 
-		                	mobj%a(i)%x(j) = 0
+		                	mobj%v(i,2,j) = 0
 		                end if
-		                call random_norm(mobj%a(i)%p(j), rand_throw, sqrt( mobj%a(i)%m * md_temp) )
+		                call random_norm(mobj%v(i,3,j), rand_throw, sqrt( mobj%a(i)%m * md_temp) )
 		            end do
 		        end do
 			!-- restart from xmd.rst
@@ -229,14 +235,14 @@ contains
         		end if
         		
 		        open(unit=10,file=trim(rst_file))
-		        do i=1,mobj%nb
+		        do i=1,md_nsum
 		            do j=1,md_bead
 		                read(10,*) ins_r
-		                mobj%a(i)%ks(j)=ins_r(4)
-		                mobj%a(i)%p(j)=ins_r(5)
-		                mobj%a(i)%x(j)=ins_r(6)
-		                mobj%a(i)%fks(j)=ins_r(7)
-		                mobj%a(i)%fx(j)=ins_r(8)
+		                mobj%v(i,1,j)=ins_r(4)
+		                mobj%v(i,2,j)=ins_r(5)
+		                mobj%v(i,3,j)=ins_r(6)
+		                mobj%v(i,4,j)=ins_r(7)
+		                mobj%v(i,5,j)=ins_r(8)
 		            end do
 		        end do
 		        if(md_m_mode .eq. 1) then
@@ -251,21 +257,21 @@ contains
 		        !-- skip the used lines
 		        open(unit=10,file=trim(smp_file))
 		        do k=2,md_sn_mode
-		            do i=1,mobj%nb
+		            do i=1,md_nsum
 		                do j=1,md_bead
 		                    read(10,*)
 		                end do
 		            end do
 		        end do
 		        !-- initial from n-th example of smp_file
-		        do i=1,mobj%nb
+		        do i=1,md_nsum
 		            do j=1,md_bead
 		                read(10,*) ins_r
-		                mobj%a(i)%ks(j)=ins_r(4)
-		                mobj%a(i)%p(j)=ins_r(5)
-		                mobj%a(i)%x(j)=ins_r(6)
-		                mobj%a(i)%fks(j)=ins_r(7)
-		                mobj%a(i)%fx(j)=ins_r(8)
+		               	mobj%v(i,1,j)=ins_r(4)
+		                mobj%v(i,2,j)=ins_r(5)
+		                mobj%v(i,3,j)=ins_r(6)
+		                mobj%v(i,4,j)=ins_r(7)
+		                mobj%v(i,5,j)=ins_r(8)
 		            end do
 		        end do
 		        close(unit=10)
@@ -293,14 +299,14 @@ contains
             		call send_err("error, lst_file record wrong information")
         		end if
         		open(unit=10,file=trim(rst_file))
-		        do i=1,mobj%nb
+		        do i=1,md_nsum
 		            do j=1,md_bead
 		                read(10,*) ins_r
-		                mobj%a(i)%ks(j)=ins_r(4)
-		                mobj%a(i)%p(j)=ins_r(5)
-		                mobj%a(i)%x(j)=ins_r(6)
-		                mobj%a(i)%fks(j)=ins_r(7)
-		                mobj%a(i)%fx(j)=ins_r(8)
+		                mobj%v(i,1,j)=ins_r(4)
+		                mobj%v(i,2,j)=ins_r(5)
+		                mobj%v(i,3,j)=ins_r(6)
+		                mobj%v(i,4,j)=ins_r(7)
+		                mobj%v(i,5,j)=ins_r(8)
 		                if(md_m_mode .eq. 1) then
 		                	md_npass = md_npass + int(ins_r(1))
 		                end if
@@ -309,12 +315,12 @@ contains
 		        close(unit=10)
 		    case default
 		    	!-- first try to initial from cnfg.rc
-		        do i=1,mobj%nb
+		        do i=1,md_nsum
 		            do j=1,md_bead
 		                if(md_b_mode .eq. 0) then 
-		                	mobj%a(i)%x(j) = 0
+		                	mobj%v(i,2,j) = 0
 		                end if
-		                call random_norm(mobj%a(i)%p(j), rand_throw, sqrt( mobj%a(i)%m * md_temp) )
+		                call random_norm(mobj%v(i,3,j), rand_throw, sqrt( mobj%a(i)%m * md_temp) )
 		            end do
 		        end do
 		        
@@ -322,14 +328,14 @@ contains
 		        inquire(file=trim(rst_file), exist=my_exist)
         		if (my_exist .eqv. .true.) then
             		open(unit=10,file=trim(rst_file))
-				    do i=1,mobj%nb
+				    do i=1,md_nsum
 				        do j=1,md_bead
 				            read(10,*) ins_r
-				            mobj%a(i)%ks(j)=ins_r(4)
-				            mobj%a(i)%p(j)=ins_r(5)
-				            mobj%a(i)%x(j)=ins_r(6)
-				            mobj%a(i)%fks(j)=ins_r(7)
-				            mobj%a(i)%fx(j)=ins_r(8)
+				            mobj%v(i,1,j)=ins_r(4)
+				            mobj%v(i,2,j)=ins_r(5)
+				            mobj%v(i,3,j)=ins_r(6)
+				            mobj%v(i,4,j)=ins_r(7)
+				            mobj%v(i,5,j)=ins_r(8)
 				            if(md_m_mode .eq. 1) then
 				            	md_npass = md_npass + int(ins_r(1))
 				            end if

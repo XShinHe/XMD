@@ -1,9 +1,14 @@
-! --- Copyright by Shin He <hx0824916@pku.edu.cn> ---
+!*
+!--- Copyright by --- XShinHe <1500011805@pku.edu.cn>
+!------- Date 2018. 08
+!--- Acknowledgement to Liu group, of PKU
+!*
+
 
 module thermo_plus
 use MyDef
 use AM_script
-use methd_plus
+use pimd_plus
 use md_info
 implicit none
     integer, private :: N_nhc=2 ! for default
@@ -41,7 +46,7 @@ contains
         type(mole), intent(inout) :: mobj
         integer, intent(in) :: n_dvd
         integer :: h, i, j, k, alpha
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead
                 do k=1,N_respa
                     do alpha=1,N_sy
@@ -84,7 +89,7 @@ contains
         type(mole), intent(inout) :: mobj
         integer, intent(in) :: n_dvd
         integer :: h, i, j, k, alpha
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead
                 do k=1,N_respa
                     do alpha=1,N_sy
@@ -126,7 +131,7 @@ contains
         type(mole), intent(inout) :: mobj
         integer, intent(in) :: n_dvd
         integer :: h, i, j, k, alpha
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead
                 do k=1,N_respa
                     do alpha=1,N_sy

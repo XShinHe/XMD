@@ -13,6 +13,8 @@ implicit none
     type(mole) :: mobj
     character(len=len1), dimension(2) :: pairs
     integer :: n,i,j
+    integer :: t1, t2, time_cal
+    
     n = command_argument_count()
     if (mod(n,2) .ne. 0) then
         call send_err( "error, arguments mismatch, they should be pairs! try \' [main] -h h\' " )
@@ -20,6 +22,15 @@ implicit none
 	    n = n/2
 	end if
 	
+	!-- set default mooes
+	md_x_mode = 0          ! general simulation
+	md_y_mode = 0          ! output ana_file only
+	md_m_mode = 0          ! refresh the start-point
+	md_e_mode = 0          ! needn't strike on balancd
+	md_sn_mode = 0         ! set n-th line zero
+	md_b_mode = 0          ! build (from cnfg.rc) without coordinates
+	
+	!-- read from terminal
 	do i=1,n
 		call get_command_argument(2*i-1, pairs(1))
 		call get_command_argument(2*i, pairs(2))
@@ -134,15 +145,28 @@ implicit none
 		end select
 	end do
 	
+	!-- initializzation rondom seed by date-and-time
+	call init_seed()
+	
+	!-- timer 1
+	call system_clock(t1)
 	!-- for initialization control parameters of molecular dynamics
     call init_md()
-    !-- initializzation rondom seed by date-and-time
-    call init_seed()
     !-- build the molecular configuration, and generate/read initial positions and momenta
     call init_traj(mobj)
+    !-- timer 2
+    call system_clock(t2)
+    time_cal = t2 - t1
+    print *, "initialization time: ", time_cal
     
+    !-- timer 1
+	call system_clock(t1)
     !-- Molecular dynamics simulations
     call md_ctrl(mobj)
+    !-- timer 2
+    call system_clock(t2)
+    time_cal = t2 - t1
+    print *, "running time: ", time_cal
     
 end program xmd
 

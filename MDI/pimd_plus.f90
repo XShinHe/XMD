@@ -1,6 +1,11 @@
-! --- Copyright by Shin He <hx0824916@pku.edu.cn> ---
+!*
+!--- Copyright by --- XShinHe <1500011805@pku.edu.cn>
+!------- Date 2018. 08
+!--- Acknowledgement to Liu group, of PKU
+!*
 
-module methd_plus
+
+module pimd_plus
 use MyDef
 use AM_script
 use myFF
@@ -15,7 +20,7 @@ contains
         integer :: i,j
         allocate( masscoeff( bead ) )
         
-        if (md_methd.eq.1) then
+        if (md_ipimd.eq.1) then
             masscoeff(1) = 1.0_dp
             do i=2,bead
                 masscoeff(i) = real(i)/(real(i) - 1.0_dp)
@@ -48,13 +53,13 @@ contains
     implicit none
         type(mole), intent(inout) :: mobj
         integer :: i,j,k
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead
-                mobj%a(i)%ks(j) = 0.0_dp
+                mobj%v(i,1,j) = 0.0_dp
                 do k=1,md_bead
-                    mobj%a(i)%ks(j) = mobj%a(i)%ks(j) + mobj%a(i)%x(k)*norm_OM(j,k)
+                    mobj%v(i,1,j) = mobj%v(i,1,j) + mobj%v(i,2,k)*norm_OM(j,k)
                 end do
-                mobj%a(i)%ks(j) = mobj%a(i)%ks(j) / DSQRT(real(md_bead,kind=dp))
+                mobj%v(i,1,j) = mobj%v(i,1,j) / DSQRT(real(md_bead,kind=dp))
             end do
         end do
     end subroutine calc_ks_norm
@@ -64,13 +69,13 @@ contains
         type(mole), intent(inout) :: mobj
         integer :: i, j, k
         !!
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead
-                mobj%a(i)%x(j) = 0.0_dp
+                mobj%v(i,2,j) = 0.0_dp
                 do k=1, md_bead
-                    mobj%a(i)%x(j) = mobj%a(i)%x(j) + mobj%a(i)%ks(k) * norm_OM(k,j)
+                    mobj%v(i,2,j) = mobj%v(i,2,j) + mobj%v(i,1,k) * norm_OM(k,j)
                 end do
-                mobj%a(i)%x(j) = mobj%a(i)%x(j) * DSQRT(real(md_bead,kind=dp))
+                mobj%v(i,2,j) = mobj%v(i,2,j) * DSQRT(real(md_bead,kind=dp))
             end do
         end do
     end subroutine calc_x_norm
@@ -80,18 +85,18 @@ contains
         type(mole), intent(inout) :: mobj
         integer :: i, j, k
         !!
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead,1
-                mobj%a(i)%fks(j) = 0.0_dp
+                mobj%v(i,5,j) = 0.0_dp
                 do k=1,md_bead
-                    mobj%a(i)%fks(j) = mobj%a(i)%fks(j) + mobj%a(i)%fx(k) * norm_OM(j,k)
+                    mobj%v(i,5,j) = mobj%v(i,5,j) + mobj%v(i,4,k) * norm_OM(j,k)
                 end do
-                mobj%a(i)%fks(j) = mobj%a(i)%fks(j)
+                mobj%v(i,5,j) = mobj%v(i,5,j)
             end do
-            mobj%a(i)%fks(1) = mobj%a(i)%fks(1) / DSQRT( real(md_bead,kind=dp) )
+            mobj%v(i,5,1) = mobj%v(i,5,1) / DSQRT( real(md_bead,kind=dp) )
             do j=2,md_bead
-                mobj%a(i)%fks(j) = mobj%a(i)%fks(j)/ DSQRT(real(md_bead,kind=dp)) + masscoeff(j) &
-                    * mobj%a(i)%m * md_bfreq2 * mobj%a(i)%ks(j)
+                mobj%v(i,5,j) = mobj%v(i,5,j)/ DSQRT(real(md_bead,kind=dp)) + masscoeff(j) &
+                    * mobj%a(i)%m * md_bfreq2 * mobj%v(i,1,j)
             end do
         end do
     end subroutine calc_fks_norm
@@ -101,12 +106,12 @@ contains
     implicit none
         type(mole), intent(inout) :: mobj
         integer :: i,j
-        do i=1,mobj%nb
-            mobj%a(i)%ks(1) = mobj%a(i)%x(1)
+        do i=1,md_nsum
+            mobj%v(i,1,1) = mobj%v(i,2,1)
             if(md_bead.eq.1) cycle
-            mobj%a(i)%ks(md_bead) = mobj%a(i)%x(md_bead) - mobj%a(i)%x(1)
+            mobj%v(i,1,md_bead) = mobj%v(i,2,md_bead) - mobj%v(i,2,1)
             do j=2,md_bead-1,1
-                mobj%a(i)%ks(j) = mobj%a(i)%x(j) - ( mobj%a(i)%x(j+1) * real(j - 1) + mobj%a(i)%x(1) ) / real(j)
+                mobj%v(i,1,j) = mobj%v(i,2,j) - ( mobj%v(i,2,j+1) * real(j - 1) + mobj%v(i,2,1) ) / real(j)
             end do
         end do
     end subroutine calc_ks_stag
@@ -116,12 +121,12 @@ contains
         type(mole), intent(inout) :: mobj
         integer :: i, j
         !!
-        do i=1,mobj%nb
-            mobj%a(i)%x(1) = mobj%a(i)%ks(1)
+        do i=1,md_nsum
+            mobj%v(i,2,1) = mobj%v(i,1,1)
             if(md_bead.eq.1) cycle
-            mobj%a(i)%x( md_bead ) = mobj%a(i)%ks( md_bead ) + mobj%a(i)%x(1)
+            mobj%v(i,2,md_bead) = mobj%v(i,1,md_bead) + mobj%v(i,1,1)
             do j=md_bead-1,2,-1
-                mobj%a(i)%x(j) = mobj%a(i)%ks(j) + ( real( j - 1 ) * mobj%a(i)%x(j+1) + mobj%a(i)%ks(1) ) / real(j)
+                mobj%v(i,2,j) = mobj%v(i,1,j) + ( real( j - 1 ) * mobj%v(i,2,j+1) + mobj%v(i,1,1) ) / real(j)
             end do
         end do
     end subroutine calc_x_stag
@@ -131,17 +136,17 @@ contains
         type(mole), intent(inout) :: mobj
         integer :: i, j
         !!
-        do i=1,mobj%nb
-            mobj%a(i)%fks(1) = 0.0_dp
+        do i=1,md_nsum
+            mobj%v(i,5,1) = 0.0_dp
             do j=1,md_bead
-                mobj%a(i)%fks(1) = mobj%a(i)%fks(1) + mobj%a(i)%fx(j)
+                mobj%v(i,5,1) = mobj%v(i,5,1) + mobj%v(i,4,j)
             end do
             do j=2,md_bead,1
-                mobj%a(i)%fks(j) = mobj%a(i)%fx(j) + mobj%a(i)%fks(j-1) * real(j-2)/real(j-1) 
+                mobj%v(i,5,j) = mobj%v(i,4,j) + mobj%v(i,5,j-1) * real(j-2)/real(j-1) 
             end do
-            mobj%a(i)%fks(1) = mobj%a(i)%fks(1)/real(md_bead,kind=dp)
+            mobj%v(i,5,1) = mobj%v(i,5,1)/real(md_bead,kind=dp)
             do j=2,md_bead
-                mobj%a(i)%fks(j) = mobj%a(i)%fks(j)/real(md_bead,kind=dp) + masscoeff(j) * mobj%a(i)%m * md_bfreq2 * mobj%a(i)%ks(j)
+                mobj%v(i,5,j) = mobj%v(i,5,j)/real(md_bead,kind=dp) + masscoeff(j) * mobj%a(i)%m * md_bfreq2 * mobj%v(i,1,j)
             end do
         end do
     end subroutine calc_fks_stag
@@ -151,12 +156,14 @@ contains
     implicit none
         type(mole), intent(inout) :: mobj
         integer :: i, j
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1, md_bead
-                mobj%a(i)%fx(j) = Fpn2( 0.5_dp*mobj%a(i)%m,  mobj%a(i)%x(j) )
+                mobj%v(i,4,j) = Fpn2( 0.5_dp,  mobj%v(i,2,j) )
             end do
         end do
     end subroutine calc_fx_ofmethd
-end module methd_plus
+        
+end module pimd_plus
+
 
 
