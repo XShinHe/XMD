@@ -2,7 +2,7 @@ temp	0.125
 mass	1
 sfreq	1
 dtime	0.01
-nstep	2000000
+nstep	1000000
 coeff	1
 scheme	0
 thermo	0

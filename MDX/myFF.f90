@@ -135,7 +135,7 @@ contains
     	real(dp), intent(inout) :: v
     	real(dp) :: normr
     	normr = dsqrt(dot_product(veca-vecb,veca-vecb))
-    	v = Vpn2(1._dp,normr-2._dp)
+    	v = Vpn2(0.5_dp,normr-2._dp)
     	return
     end subroutine V3PN2_01
     
@@ -146,7 +146,7 @@ contains
     	real(dp) :: normr
     	r = veca - vecb
     	normr = dsqrt(dot_product(r,r))
-    	vecf = Fpn2(1._dp,normr-2._dp)/normr * r
+    	vecf = Fpn2(0.5_dp,normr-2._dp)/normr * r
     	return
     end subroutine F3PN2_01
     

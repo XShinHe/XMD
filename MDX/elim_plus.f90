@@ -21,7 +21,7 @@ contains
         elim_succ = 0
         elim_set0 = .false.
         ww=0._dp
-        do i=1,mobj%nb
+        do i=1,md_nsum
             ww=ww+real(md_bead)*mobj%a(i)%m
         end do
     end subroutine set_elim
@@ -42,7 +42,7 @@ contains
         !! calculate elim_rc and elim_pc
         elim_rc=0._dp
         elim_pc=0._dp
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,3
                 elim_rc(j)=elim_rc(j)+sum( mobj%a(i)%x(j::3) ) * mobj%a(i)%m
                 elim_pc(j)=elim_pc(j)+sum( mobj%a(i)%p(j::3) )
@@ -51,7 +51,7 @@ contains
         elim_rc=elim_rc/ww
         !! elim_pc is needn't changed
         !! then we should eliminate the transistion motion (rotation elimination need!)
-        do i=1,mobj%nb
+        do i=1,md_nsum
             mobj%a(i)%x(1::3) = mobj%a(i)%x(1::3) - elim_rc(1)
             mobj%a(i)%x(2::3) = mobj%a(i)%x(1::3) - elim_rc(2)
             mobj%a(i)%x(3::3) = mobj%a(i)%x(1::3) - elim_rc(3)
@@ -75,7 +75,7 @@ contains
         !!
         elim_inertia=0._dp
         elim_AMomenta=0._dp
-        do i=1,mobj%nb
+        do i=1,md_nsum
             !! Angular momenta
             do j=1,md_bead
                 call outer(tmpvec, mobj%a(i)%x(3*j-2:3*j:1), mobj%a(i)%p(3*j-2:3*j:1))
@@ -109,7 +109,7 @@ contains
         
         !!
         !! rotation elimnation
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead
                 call outer(tmpvec, elim_omega, mobj%a(i)%x(3*j-2:3*j:1) )
                 mobj%a(i)%p(3*j-2:3*j:1) = mobj%a(i)%p(3*j-2:3*j:1) - mobj%a(i)%m * tmpvec

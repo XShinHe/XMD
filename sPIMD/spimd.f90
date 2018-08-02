@@ -294,6 +294,7 @@ implicit none
     character(len=20) :: para_infile                        ! filename input the parameters in as 2nd args
     character(len=8) :: flg,arg                                 ! get n-th trajectory as 1st args
     integer :: n, i, j, init_md_completed
+    integer :: t1,t2
     !!
     !!
     n = command_argument_count()
@@ -338,7 +339,10 @@ implicit none
     ! initial and then run
     call init_seed()
     call init_tj()
+    call system_clock(t1)
     call md_control(traj_outfile, ana_file)
+    call system_clock(t2)
+    print *, "runtime  ",t2-t1
 !!
 end program main
 

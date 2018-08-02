@@ -1,6 +1,6 @@
 ! --- Copyright by Shin He <hx0824916@pku.edu.cn> ---
 
-module methd_plus
+module pimd_plus
 use MyDef
 use AM_script
 use myFF
@@ -15,7 +15,7 @@ contains
         integer :: i,j
         allocate( masscoeff( bead ) )
         
-        if (md_methd.eq.1) then
+        if (md_ipimd.eq.1) then
             masscoeff(1) = 1.0_dp
             do i=2,bead
                 masscoeff(i) = real(i)/(real(i) - 1.0_dp)
@@ -48,7 +48,7 @@ contains
     implicit none
         type(mole), intent(inout) :: mobj
         integer :: i,j,k
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead
                 mobj%a(i)%ks(j) = 0.0_dp
                 do k=1,md_bead
@@ -64,7 +64,7 @@ contains
         type(mole), intent(inout) :: mobj
         integer :: i, j, k
         !!
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead
                 mobj%a(i)%x(j) = 0.0_dp
                 do k=1, md_bead
@@ -80,7 +80,7 @@ contains
         type(mole), intent(inout) :: mobj
         integer :: i, j, k
         !!
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1,md_bead,1
                 mobj%a(i)%fks(j) = 0.0_dp
                 do k=1,md_bead
@@ -101,7 +101,7 @@ contains
     implicit none
         type(mole), intent(inout) :: mobj
         integer :: i,j
-        do i=1,mobj%nb
+        do i=1,md_nsum
             mobj%a(i)%ks(1) = mobj%a(i)%x(1)
             if(md_bead.eq.1) cycle
             mobj%a(i)%ks(md_bead) = mobj%a(i)%x(md_bead) - mobj%a(i)%x(1)
@@ -116,7 +116,7 @@ contains
         type(mole), intent(inout) :: mobj
         integer :: i, j
         !!
-        do i=1,mobj%nb
+        do i=1,md_nsum
             mobj%a(i)%x(1) = mobj%a(i)%ks(1)
             if(md_bead.eq.1) cycle
             mobj%a(i)%x( md_bead ) = mobj%a(i)%ks( md_bead ) + mobj%a(i)%x(1)
@@ -131,7 +131,7 @@ contains
         type(mole), intent(inout) :: mobj
         integer :: i, j
         !!
-        do i=1,mobj%nb
+        do i=1,md_nsum
             mobj%a(i)%fks(1) = 0.0_dp
             do j=1,md_bead
                 mobj%a(i)%fks(1) = mobj%a(i)%fks(1) + mobj%a(i)%fx(j)
@@ -151,7 +151,7 @@ contains
     implicit none
         type(mole), intent(inout) :: mobj
         integer :: i, j
-        do i=1,mobj%nb
+        do i=1,md_nsum
             do j=1, md_bead
                 mobj%a(i)%fx(j) = Fpn2( 0.5_dp*mobj%a(i)%m,  mobj%a(i)%x(j) )
             end do
@@ -253,6 +253,6 @@ contains
     end subroutine fx2fks_stag
     
 
-end module methd_plus
+end module pimd_plus
 
 

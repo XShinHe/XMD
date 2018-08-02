@@ -1,5 +1,5 @@
 job	        MD,program,of,1-Dimension
-anaterm     nstep,atom,<x>,Pe,Ke,Te,ana1
+anaterm     nstep,atom,<x>,Ep,Ek,Et,ana1
 stat-xlabel Energy
 stat-ylabel Density,distribution
 stat-title  the,distributon,of,Quadratic,potenial

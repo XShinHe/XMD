@@ -187,8 +187,8 @@ contains
         !-- allocations
         allocate(mobj%a( md_nsum ))
         do i=1,md_nsum
-            allocate( mobj%a(i)%x( md_bead ) )
-            allocate( mobj%a(i)%ks( md_bead) )
+            allocate( mobj%a(i)%ks( md_bead ) )
+            allocate( mobj%a(i)%x( md_bead) )
             allocate( mobj%a(i)%p( md_bead ) )
             allocate( mobj%a(i)%fx( md_bead) )
             allocate( mobj%a(i)%fks( md_bead) )

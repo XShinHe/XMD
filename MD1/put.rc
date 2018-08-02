@@ -5,7 +5,7 @@ nsamp	1
 thermo	0
 scheme	0
 coeff	1
-pimode	2
+pimode	1
 bead	100
 gamma	1
 vir	0

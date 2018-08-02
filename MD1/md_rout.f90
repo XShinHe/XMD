@@ -45,10 +45,10 @@ contains
 		!-- open relative record files
 		if(md_y_mode .ge. 1) then
 			open(unit=out_unit, file=out_file, status='replace')
-			write(out_unit,*) 'nstep    ', 'atom   ','nbead    ','ks   ','x    ','p    ','fx  ', 'fks   '
+			write(out_unit,*) 'nstep    ', 'atom   ','bead    ','ks   ','x    ','p    ','fx  ', 'fks   '
 		end if
 		open(unit=ana_unit, file=ana_file, status='replace')
-		write(ana_unit,*) 'nstep    ', 'atom   ','<x>    ','Pe   ','Ke    ', 'Te   ','ana1    '
+		write(ana_unit,*) 'nstep    ', 'atom   ','<x>    ','Ep   ','Ek    ', 'Et   ','ana1    '
 		
 		!-- select md-scheme and do simulation
 		select case (md_ischeme)
@@ -122,26 +122,26 @@ contains
 		type(mole), intent(in) :: mobj
 		integer :: i,j
 		!!
+		!-- write ana_file
+		if (md_x_mode .ne. 1 .or. md_npass > md_nstep/4) then
+		    if(md_ipimd.ne.2) then
+			   	!-- for staging-pimd, averging the position
+		        write (ana_unit,*) md_npass, 0, sum( mobj%a(1)%x )/real(md_bead), &
+		            mobj%pe, mobj%ke, mobj%te, 0  ! 8 term
+		    else
+		    	!-- for normal-mode-pimd(CMD)
+		        write (ana_unit,*) md_npass, 0, mobj%a(1)%ks(1), &
+		            mobj%pe, mobj%ke, mobj%te, 0 ! 8 term
+		    end if
+		end if
+		
+		if(md_y_mode < 1) return
+		!-- write out_file
 		do i=1,md_nsum
-			!-- write out_file
-			if(md_y_mode.ge. 1) then
-				do j=1,md_bead
-				    write (out_unit,*) md_npass, i, j, mobj%a(i)%ks(j), mobj%a(i)%x(j), &
-				        mobj%a(i)%p(j),mobj%a(i)%fx(j),mobj%a(i)%fks(j)                   ! 8 term
-				end do
-		    end if
-		    !-- write ana_file
-		    if (md_x_mode .ne. 1 .or. md_npass > md_nstep/4) then
-		        if(md_ipimd.ne.2) then
-		        	!-- for staging-pimd, averging the position
-		            write (ana_unit,*) md_npass, i, sum( mobj%a(i)%x )/real(md_bead), &
-		                mobj%a(i)%pe, mobj%a(i)%ke, mobj%a(i)%te, 0  ! 8 term
-		        else
-		        	!-- for normal-mode-pimd(CMD)
-		            write (ana_unit,*) md_npass, i, mobj%a(i)%ks(1), &
-		                mobj%a(i)%pe, mobj%a(i)%ke, mobj%a(i)%te, 0 ! 8 term
-		        end if
-		    end if
+			do j=1,md_bead
+			    write (out_unit,*) md_npass, i, j, mobj%a(i)%ks(j), mobj%a(i)%x(j), &
+			        mobj%a(i)%p(j),mobj%a(i)%fx(j),mobj%a(i)%fks(j)                   ! 8 term
+			end do
 		end do
 	end subroutine md_sampling
 
@@ -222,8 +222,50 @@ contains
 		    end do
 		end do
 	end subroutine md_propagate_p
+	
 
+	!-- calculation of analyzer (mainly analysis fo energy)
+	subroutine calc_ana(mobj)
+	implicit none
+		type(mole), intent(inout) :: mobj 
+		real(dp) :: x_c
+		integer :: i,j
+		
+		mobj%pe = 0.0_dp
+		mobj%ke = 0.50_dp * md_nsum * md_temp
+		!-- original estimitor of kinetc energy, IF NEED, TO REMOVE NEXT LINE
+		! mobj%ke = 0.5_dp* md_nsum * md_bead * md_temp
+		do j=1,md_bead
+			mobj%pe = mobj%pe + full_pes(mobj,j)
+		    do i=1,md_nsum
+		    	x_c = sum( mobj%a(i)%x )/real(md_bead)
+		        mobj%ke = mobj%ke + 0.5_dp * ( mobj%a(i)%x(j) -x_c ) * mobj%a(i)%fx(j) / real(md_bead)
+		        !-- original estimitor of kinetc energy, IF NEED, TO REMOVE NEXT LINE
+		        ! if(j .eq. 1) cycle
+		        ! mobj%ke = mobj%ke - 0.5_dp * mobj%a(i)%m * masscoeff(j)* md_bfreq2 * mobj%a(i)%ks(j)**2
+		    end do
+		end do
+		mobj%pe = mobj%pe / real(md_bead)
+		mobj%te = mobj%pe + mobj%ke
+	end subroutine calc_ana
+	
+	real(dp) function full_pes(mobj,j)
+	implicit none
+		type(mole), intent(inout) :: mobj
+		integer, intent(in) :: j
+		integer :: i,k
+		
+		full_pes = 0
+		do i=1,md_nsum
+			full_pes = full_pes + Vpn2(0.5_dp, mobj%a(i)%x(j))                    !!!!!!!!!!!!!!!!!!!!!!!!!!!            POTENTIAL
+			do k=i+1,md_nsum
+				print *, "two-body interaction doesn't add for MD1"
+				stop
+			end do
+		end do
+	end function full_pes
 
+	
 	!-- calculation of force (v.s. x)
 	subroutine calc_fx(mobj)
 	implicit none
@@ -231,32 +273,10 @@ contains
 		integer :: i, j
 		do i=1,md_nsum
 		    do j=1, md_bead
-		        mobj%a(i)%fx(j) = Fpn2( 0.5_dp*mobj%a(i)%m,  mobj%a(i)%x(j) )
+		        mobj%a(i)%fx(j) = Fpn2( 0.5_dp,  mobj%a(i)%x(j) )               !!!!!!!!!!!!!!!!!!!!!!!!!!!!           FORCE
 		    end do
 		end do
 	end subroutine calc_fx
-
-
-	!-- calculation of analyzer (mainly analysis fo energy)
-	subroutine calc_ana(mobj)
-	implicit none
-		type(mole), intent(inout) :: mobj 
-		integer :: i,j
-		do i=1,md_nsum
-		    mobj%a(i)%pe = 0.0_dp
-		    mobj%a(i)%ke = 0.0_dp
-		    !-- original estimitor of kinetc energy, IF NEED, TO REMOVE NEXT LINE
-		    ! mobj%a(i)%ke = 0.5_dp*md_bead*md_temp + 0.5_dp * mobj%a(i)%m * masscoeff(1)* md_bfreq2 * mobj%a(i)%ks(1)**2
-		    do j=1,md_bead
-		        mobj%a(i)%pe = mobj%a(i)%pe + Vpn2( 0.5_dp*mobj%a(i)%m, mobj%a(i)%x(j))
-		        mobj%a(i)%ke = mobj%a(i)%ke + 0.5_dp * mobj%a(i)%x(j) * mobj%a(i)%fx(j)
-		        !-- original estimitor of kinetc energy, , IF NEED, TO REMOVE NEXT LINE
-		        ! mobj%a(i)%ke = mobj%a(i)%ke - 0.5_dp * mobj%a(i)%m * masscoeff(j)* md_bfreq2 * mobj%a(i)%ks(j)**2
-		    end do
-		    mobj%a(i)%pe = mobj%a(i)%pe / real(md_bead)
-		    mobj%a(i)%te = mobj%a(i)%pe + mobj%a(i)%ke
-		end do
-	end subroutine calc_ana
 
 end module md_rout
 
